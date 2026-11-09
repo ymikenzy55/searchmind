@@ -13,11 +13,12 @@ class Database:
         self.database_url = os.getenv("DATABASE_URL")
         self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
         
-        # Create connection pool for better performance
+        # Create connection pool for better performance with SSL support
         self.connection_pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=1,
             maxconn=10,
-            dsn=self.database_url
+            dsn=self.database_url,
+            sslmode='require'
         )
         
         # Initialize Redis for caching
