@@ -1,3 +1,7 @@
+# Documentation - Don't push to GitHub
+*.md
+!README.md
+
 # Environment
 .env
 .env.*

@@ -5,14 +5,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "next-themes";
 import axios from "axios";
 import {
-  Search,
   Send,
   Moon,
   Sun,
   LogOut,
-  Trash2,
+  Menu,
+  Plus,
+  MessageSquare,
   User,
-  Bot,
+  Sparkles,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -30,7 +31,9 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState("default");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     loadHistory();
@@ -40,8 +43,20 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [input]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + "px";
+    }
   };
 
   const loadHistory = async () => {
@@ -99,49 +114,83 @@ export default function Chat() {
     }
   };
 
-  const handleClearHistory = async () => {
-    if (!confirm("Clear all messages in this chat?")) return;
-    try {
-      await axios.delete(`${API_URL}/api/chat/history`, {
-        params: { session_id: sessionId, token },
-      });
-      setMessages([]);
-    } catch (error) {
-      console.error("Failed to clear history:", error);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e);
     }
   };
 
-  const quickQuestions = [
-    "What's the latest in AI?",
-    "Explain quantum computing",
-    "Tell me about yourself",
-    "How does web search work?",
-  ];
+  const startNewChat = () => {
+    setMessages([]);
+    setSessionId(`chat_${Date.now()}`);
+  };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-              <Search className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+    <div className="flex h-screen bg-white dark:bg-gray-900">
+      {/* Sidebar */}
+      <div
+        className={`${
+          sidebarOpen ? "w-64" : "w-0"
+        } transition-all duration-300 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden`}
+      >
+        <div className="p-4 space-y-2">
+          <button
+            onClick={startNewChat}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm font-medium">New chat</span>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 space-y-1">
+          <div className="flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+            <MessageSquare className="w-4 h-4" />
+            Recent
+          </div>
+          {/* Add chat history items here */}
+        </div>
+
+        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="h-14 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-semibold text-gray-900 dark:text-white">
                 SearchMind
-              </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Welcome, {user?.name}!
-              </p>
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">
+              {user?.name}
+            </span>
             <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              title={theme === "dark" ? "Light mode" : "Dark mode"}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
             >
               {theme === "dark" ? (
                 <Sun className="w-5 h-5 text-yellow-500" />
@@ -149,133 +198,108 @@ export default function Chat() {
                 <Moon className="w-5 h-5 text-gray-700" />
               )}
             </button>
+          </div>
+        </header>
 
-            <button
-              onClick={handleClearHistory}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              title="Clear chat"
-            >
-              <Trash2 className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            </button>
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center px-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-3xl font-semibold text-gray-900 dark:text-white mb-2">
+                How can I help you today?
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
+                I can search the web, answer questions, and assist with research
+              </p>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+              {messages.map((message, idx) => (
+                <div
+                  key={idx}
+                  className={`flex gap-4 ${
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  {message.role === "assistant" && (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      message.role === "user"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                  {message.role === "user" && (
+                    <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+                    </div>
+                  )}
+                </div>
+              ))}
 
-            <button
-              onClick={logout}
-              className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition"
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5 text-red-600 dark:text-red-400" />
-            </button>
+              {loading && (
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3">
+                    <div className="flex gap-2">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0.1s" }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input Area - ChatGPT Style */}
+        <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <div className="max-w-3xl mx-auto px-4 py-4">
+            <form onSubmit={handleSendMessage} className="relative">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Message SearchMind..."
+                disabled={loading}
+                rows={1}
+                className="w-full resize-none bg-gray-100 dark:bg-gray-800 rounded-3xl pl-6 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-white disabled:opacity-50 max-h-[200px] overflow-y-auto"
+                style={{ minHeight: "56px" }}
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="absolute right-3 bottom-4 w-8 h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 rounded-full transition"
+              >
+                <Send className="w-4 h-4 text-white" />
+              </button>
+            </form>
+            <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+              SearchMind can make mistakes. Check important info.
+            </p>
           </div>
         </div>
-      </header>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-4xl mx-auto space-y-4">
-          {messages.length === 0 && (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-4">
-                <Search className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Start a Conversation
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Ask me anything or try one of these:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                {quickQuestions.map((question, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setInput(question)}
-                    className="p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition text-left text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    {question}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {messages.map((message, idx) => (
-            <div
-              key={idx}
-              className={`flex items-start space-x-3 ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              {message.role === "assistant" && (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-5 h-5 text-white" />
-                </div>
-              )}
-
-              <div
-                className={`max-w-2xl px-4 py-3 rounded-2xl ${
-                  message.role === "user"
-                    ? "bg-blue-500 text-white"
-                    : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700"
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              </div>
-
-              {message.role === "user" && (
-                <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-gray-700 dark:text-gray-200" />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {loading && (
-            <div className="flex items-start space-x-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
-              </div>
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl">
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input Area */}
-      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
-        <form
-          onSubmit={handleSendMessage}
-          className="max-w-4xl mx-auto flex space-x-3"
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask SearchMind anything..."
-            disabled={loading}
-            className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition text-gray-900 dark:text-white disabled:opacity-50"
-          />
-          <button
-            type="submit"
-            disabled={loading || !input.trim()}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-lg hover:shadow-xl"
-          >
-            <Send className="w-5 h-5" />
-            <span className="font-medium">Send</span>
-          </button>
-        </form>
       </div>
     </div>
   );
