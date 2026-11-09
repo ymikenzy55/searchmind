@@ -11,9 +11,8 @@ import {
   LogOut,
   Menu,
   Plus,
-  MessageSquare,
   User,
-  Sparkles,
+  X,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -127,38 +126,36 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen bg-white dark:bg-gray-900">
+    <div className="flex h-screen bg-white dark:bg-black">
       {/* Sidebar */}
       <div
         className={`${
           sidebarOpen ? "w-64" : "w-0"
-        } transition-all duration-300 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden`}
+        } transition-all duration-300 bg-white dark:bg-black border-r border-gray-200 dark:border-zinc-800 flex flex-col overflow-hidden`}
       >
-        <div className="p-4 space-y-2">
+        <div className="p-3 space-y-2">
           <button
             onClick={startNewChat}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span className="text-sm font-medium">New chat</span>
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 space-y-1">
-          <div className="flex items-center gap-3 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-            <MessageSquare className="w-4 h-4" />
-            Recent
-          </div>
-          {/* Add chat history items here */}
-        </div>
+        <div className="flex-1 overflow-y-auto px-2"></div>
 
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+        <div className="p-3 border-t border-gray-200 dark:border-zinc-800 space-y-1">
+          <div className="flex items-center gap-3 px-3 py-2 text-sm">
+            <User className="w-4 h-4" />
+            <span className="truncate">{user?.name}</span>
+          </div>
           <button
             onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition text-sm"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-900 transition-colors text-sm"
           >
             <LogOut className="w-4 h-4" />
-            <span>Logout</span>
+            <span>Log out</span>
           </button>
         </div>
       </div>
@@ -166,81 +163,70 @@ export default function Chat() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="h-14 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4">
+        <header className="h-14 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-900 rounded-lg transition-colors"
             >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                SearchMind
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">
-              {user?.name}
-            </span>
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
-            >
-              {theme === "dark" ? (
-                <Sun className="w-5 h-5 text-yellow-500" />
+              {sidebarOpen ? (
+                <X className="w-5 h-5" />
               ) : (
-                <Moon className="w-5 h-5 text-gray-700" />
+                <Menu className="w-5 h-5" />
               )}
             </button>
+            <span className="font-semibold text-lg">SearchMind</span>
           </div>
+
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-900 rounded-lg transition-colors"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </button>
         </header>
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center px-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mb-4">
-                <Sparkles className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 bg-black dark:bg-white rounded-xl flex items-center justify-center mb-6">
+                <div className="w-6 h-6 border-2 border-white dark:border-black rounded-full"></div>
               </div>
-              <h2 className="text-3xl font-semibold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-2xl font-semibold mb-2">
                 How can I help you today?
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
-                I can search the web, answer questions, and assist with research
+              <p className="text-gray-600 dark:text-zinc-400 text-center max-w-md">
+                Ask me anything or let me help with your research
               </p>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+            <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
               {messages.map((message, idx) => (
                 <div
                   key={idx}
-                  className={`flex gap-4 ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  }`}
+                  className="flex gap-4"
                 >
                   {message.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-4 h-4 text-white" />
+                    <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+                      <div className="w-4 h-4 border-2 border-white dark:border-black rounded-full"></div>
                     </div>
                   )}
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      message.role === "user"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  <div className="flex-1 space-y-2 pt-1">
+                    <div className="font-medium text-sm text-gray-900 dark:text-white">
+                      {message.role === "assistant" ? "SearchMind" : user?.name}
+                    </div>
+                    <p className="text-gray-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                      {message.content}
+                    </p>
                   </div>
                   {message.role === "user" && (
-                    <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+                    <div className="w-8 h-8 bg-gray-200 dark:bg-zinc-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4" />
                     </div>
                   )}
                 </div>
@@ -248,18 +234,19 @@ export default function Chat() {
 
               {loading && (
                 <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center">
+                    <div className="w-4 h-4 border-2 border-white dark:border-black rounded-full"></div>
                   </div>
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3">
-                    <div className="flex gap-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="flex-1 pt-1">
+                    <div className="font-medium text-sm mb-2">SearchMind</div>
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-gray-400 dark:bg-zinc-600 rounded-full animate-bounce"></div>
                       <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-gray-400 dark:bg-zinc-600 rounded-full animate-bounce"
                         style={{ animationDelay: "0.1s" }}
                       ></div>
                       <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        className="w-2 h-2 bg-gray-400 dark:bg-zinc-600 rounded-full animate-bounce"
                         style={{ animationDelay: "0.2s" }}
                       ></div>
                     </div>
@@ -272,8 +259,8 @@ export default function Chat() {
           )}
         </div>
 
-        {/* Input Area - ChatGPT Style */}
-        <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        {/* Input Area */}
+        <div className="border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-black">
           <div className="max-w-3xl mx-auto px-4 py-4">
             <form onSubmit={handleSendMessage} className="relative">
               <textarea
@@ -284,18 +271,18 @@ export default function Chat() {
                 placeholder="Message SearchMind..."
                 disabled={loading}
                 rows={1}
-                className="w-full resize-none bg-gray-100 dark:bg-gray-800 rounded-3xl pl-6 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-white disabled:opacity-50 max-h-[200px] overflow-y-auto"
-                style={{ minHeight: "56px" }}
+                className="w-full resize-none bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-zinc-600 disabled:opacity-50 max-h-[200px] overflow-y-auto"
+                style={{ minHeight: "48px" }}
               />
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
-                className="absolute right-3 bottom-4 w-8 h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 rounded-full transition"
+                className="absolute right-2 bottom-2 w-8 h-8 flex items-center justify-center bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 disabled:bg-gray-200 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed rounded-lg transition-colors"
               >
-                <Send className="w-4 h-4 text-white" />
+                <Send className="w-4 h-4 text-white dark:text-black" />
               </button>
             </form>
-            <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+            <p className="text-xs text-center text-gray-500 dark:text-zinc-600 mt-2">
               SearchMind can make mistakes. Check important info.
             </p>
           </div>

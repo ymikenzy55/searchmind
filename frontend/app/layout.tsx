@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
+const inter = Inter({ subsets: ["latin"] });
+
 export const metadata: Metadata = {
-  title: "SearchMind - AI Research Assistant",
-  description: "Your intelligent research companion with permanent memory",
+  title: "SearchMind - AI Assistant",
+  description: "Intelligent research companion with real-time web search",
 };
 
 export default function RootLayout({
@@ -15,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={inter.className}>
         <ThemeProvider>
           <AuthProvider>
             {children}
