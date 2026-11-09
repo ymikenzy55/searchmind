@@ -5,6 +5,17 @@ pydantic>=2.0.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 PyJWT>=2.8.0
+
+# Database
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
+sqlalchemy>=2.0.23
+
+# Caching
+redis>=5.0.1
+hiredis>=2.2.3
+
+# LangChain
 langchain>=0.1.0
 langchain-community>=0.0.10
 langchain-core>=0.1.0
