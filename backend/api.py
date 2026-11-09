@@ -1,0 +1,244 @@
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, List
+import os
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
+import jwt
+from passlib.context import CryptContext
+import sqlite3
+
+from agent import create_agent, query_agent
+from memory import ConversationMemory
+from database import Database
+
+load_dotenv()
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="SearchMind API",
+    description="AI Research Assistant with persistent memory",
+    version="2.0.0"
+)
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "https://*.vercel.app"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Security
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-this-in-production")
+ALGORITHM = "HS256"
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Initialize services
+memory = ConversationMemory()
+db = Database()
+agent_instance = None
+
+# Pydantic Models
+class UserRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class QueryRequest(BaseModel):
+    message: str
+    session_id: Optional[str] = "default"
+
+class MessageResponse(BaseModel):
+    role: str
+    content: str
+    timestamp: str
+
+class ChatResponse(BaseModel):
+    response: str
+    session_id: str
+
+# Helper Functions
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=7)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# Routes
+@app.on_event("startup")
+async def startup_event():
+    global agent_instance
+    agent_instance = create_agent()
+    db.init_db()
+
+@app.get("/")
+async def root():
+    return {
+        "message": "SearchMind API is running",
+        "version": "2.0.0",
+        "status": "active"
+    }
+
+@app.post("/api/auth/register")
+async def register(user: UserRegister):
+    try:
+        # Check if user exists
+        existing_user = db.get_user_by_email(user.email)
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Hash password
+        hashed_password = pwd_context.hash(user.password)
+        
+        # Create user
+        user_id = db.create_user(user.name, user.email, hashed_password)
+        
+        # Create token
+        token = create_access_token({"user_id": user_id, "email": user.email, "name": user.name})
+        
+        return {
+            "token": token,
+            "user": {
+                "id": user_id,
+                "name": user.name,
+                "email": user.email
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/auth/login")
+async def login(user: UserLogin):
+    try:
+        # Get user
+        db_user = db.get_user_by_email(user.email)
+        if not db_user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Verify password
+        if not pwd_context.verify(user.password, db_user["password"]):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        # Create token
+        token = create_access_token({
+            "user_id": db_user["id"],
+            "email": db_user["email"],
+            "name": db_user["name"]
+        })
+        
+        return {
+            "token": token,
+            "user": {
+                "id": db_user["id"],
+                "name": db_user["name"],
+                "email": db_user["email"]
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/auth/me")
+async def get_current_user(token: str):
+    payload = verify_token(token)
+    return {
+        "user": {
+            "id": payload.get("user_id"),
+            "name": payload.get("name"),
+            "email": payload.get("email")
+        }
+    }
+
+@app.post("/api/chat/query", response_model=ChatResponse)
+async def chat_query(request: QueryRequest, token: Optional[str] = None):
+    try:
+        # Verify user if token provided
+        user_id = "guest"
+        if token:
+            payload = verify_token(token)
+            user_id = payload.get("user_id")
+        
+        # Create session ID based on user
+        session_id = f"{user_id}_{request.session_id}"
+        
+        # Query agent
+        response = query_agent(agent_instance, request.message, session_id)
+        
+        return {
+            "response": response,
+            "session_id": request.session_id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/chat/history", response_model=List[MessageResponse])
+async def get_history(session_id: str = "default", token: Optional[str] = None):
+    try:
+        # Verify user if token provided
+        user_id = "guest"
+        if token:
+            payload = verify_token(token)
+            user_id = payload.get("user_id")
+        
+        full_session_id = f"{user_id}_{session_id}"
+        history = memory.get_conversation_history(full_session_id, limit=50)
+        
+        return history
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/chat/history")
+async def clear_history(session_id: str = "default", token: Optional[str] = None):
+    try:
+        user_id = "guest"
+        if token:
+            payload = verify_token(token)
+            user_id = payload.get("user_id")
+        
+        full_session_id = f"{user_id}_{session_id}"
+        memory.clear_history(full_session_id)
+        
+        return {"message": "History cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/chat/sessions")
+async def get_sessions(token: str):
+    try:
+        payload = verify_token(token)
+        user_id = payload.get("user_id")
+        
+        sessions = memory.get_user_sessions(user_id)
+        return {"sessions": sessions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "agent": "active" if agent_instance else "inactive",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

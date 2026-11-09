@@ -1,45 +1,48 @@
-# Environment variables
+# Environment
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.local
 
-# Virtual environment
-.venv/
-venv/
-ENV/
-env/
+# Old Streamlit files
+app.py.old
+main.py.old
+requirements.txt.old
 
-# Python cache
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.venv/
+venv/
+.Python
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-conversation_history.db
+# Node
+node_modules/
+.next/
+out/
+.vercel
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# Jupyter Notebook
-.ipynb_checkpoints/
-
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
 # Logs
 *.log
+npm-debug.log*
 
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
+# Research/temp
+research/

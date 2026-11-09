@@ -1,4 +1,4 @@
-﻿import os
+import os
 import certifi
 from dotenv import load_dotenv 
 
@@ -88,29 +88,3 @@ def query_agent(agent_executor, question, session_id="default"):
         return answer
     except Exception as e:
         return f"Error: {str(e)}"
-
-def get_conversation_history(session_id="default", limit=50):
-    """Get conversation history from database"""
-    return memory.get_conversation_history(session_id, limit)
-
-def clear_conversation_history(session_id="default"):
-    """Clear conversation history"""
-    memory.clear_history(session_id)
-
-def get_total_messages(session_id="default"):
-    """Get total message count"""
-    return memory.get_all_messages_count(session_id)
-
-if __name__ == "__main__":
-    # Test the agent
-    agent = create_agent()
-    
-    # First question
-    print("Question 1:")
-    result1 = query_agent(agent, "My name is John")
-    print(result1)
-    
-    # Second question - should remember
-    print("\nQuestion 2:")
-    result2 = query_agent(agent, "What's my name?")
-    print(result2)
