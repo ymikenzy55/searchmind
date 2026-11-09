@@ -126,8 +126,9 @@ async def register(user: UserRegister):
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         
-        # Hash password
-        hashed_password = pwd_context.hash(user.password)
+        # Hash password (truncate to 72 bytes for bcrypt)
+        password_truncated = user.password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+        hashed_password = pwd_context.hash(password_truncated)
         
         # Create user
         user_id = db.create_user(user.name, user.email, hashed_password)
@@ -159,8 +160,9 @@ async def login(user: UserLogin):
         if not db_user:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        # Verify password
-        if not pwd_context.verify(user.password, db_user["password"]):
+        # Verify password (truncate to 72 bytes for bcrypt)
+        password_truncated = user.password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+        if not pwd_context.verify(password_truncated, db_user["password"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         
         # Create token
