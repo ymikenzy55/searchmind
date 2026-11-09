@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -7,11 +7,17 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
-import sqlite3
 
-from agent import create_agent, query_agent
-from memory import ConversationMemory
-from database import Database
+try:
+    # Try relative imports first (when run as module)
+    from backend.agent import create_agent, query_agent
+    from backend.memory import ConversationMemory
+    from backend.database import Database
+except ImportError:
+    # Fall back to direct imports (when run directly)
+    from agent import create_agent, query_agent
+    from memory import ConversationMemory
+    from database import Database
 
 load_dotenv()
 
@@ -37,9 +43,15 @@ ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Initialize services
-memory = ConversationMemory()
-db = Database()
-agent_instance = None
+print("Initializing services...")
+try:
+    memory = ConversationMemory()
+    db = Database()
+    agent_instance = None
+    print("✅ Services initialized")
+except Exception as e:
+    print(f"❌ Service initialization error: {e}")
+    raise
 
 # Pydantic Models
 class UserRegister(BaseModel):
@@ -85,8 +97,13 @@ def verify_token(token: str):
 @app.on_event("startup")
 async def startup_event():
     global agent_instance
-    agent_instance = create_agent()
-    db.init_db()
+    print("Starting up...")
+    try:
+        agent_instance = create_agent()
+        db.init_db()
+        print("✅ Startup complete")
+    except Exception as e:
+        print(f"❌ Startup error: {e}")
 
 @app.get("/")
 async def root():
@@ -96,9 +113,14 @@ async def root():
         "status": "active"
     }
 
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
 @app.post("/api/auth/register")
 async def register(user: UserRegister):
     try:
+        print(f"Register attempt: {user.email}")
         # Check if user exists
         existing_user = db.get_user_by_email(user.email)
         if existing_user:
@@ -109,6 +131,7 @@ async def register(user: UserRegister):
         
         # Create user
         user_id = db.create_user(user.name, user.email, hashed_password)
+        print(f"✅ User created: {user_id}")
         
         # Create token
         token = create_access_token({"user_id": user_id, "email": user.email, "name": user.name})
@@ -121,12 +144,16 @@ async def register(user: UserRegister):
                 "email": user.email
             }
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"❌ Register error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/auth/login")
 async def login(user: UserLogin):
     try:
+        print(f"Login attempt: {user.email}")
         # Get user
         db_user = db.get_user_by_email(user.email)
         if not db_user:
@@ -143,6 +170,7 @@ async def login(user: UserLogin):
             "name": db_user["name"]
         })
         
+        print(f"✅ Login successful: {user.email}")
         return {
             "token": token,
             "user": {
@@ -154,6 +182,7 @@ async def login(user: UserLogin):
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Login error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/auth/me")
@@ -187,9 +216,10 @@ async def chat_query(request: QueryRequest, token: Optional[str] = None):
             "session_id": request.session_id
         }
     except Exception as e:
+        print(f"❌ Chat error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/chat/history", response_model=List[MessageResponse])
+@app.get("/api/chat/history")
 async def get_history(session_id: str = "default", token: Optional[str] = None):
     try:
         # Verify user if token provided
@@ -203,6 +233,7 @@ async def get_history(session_id: str = "default", token: Optional[str] = None):
         
         return history
     except Exception as e:
+        print(f"❌ History error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/chat/history")
@@ -218,27 +249,10 @@ async def clear_history(session_id: str = "default", token: Optional[str] = None
         
         return {"message": "History cleared successfully"}
     except Exception as e:
+        print(f"❌ Clear history error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/chat/sessions")
-async def get_sessions(token: str):
-    try:
-        payload = verify_token(token)
-        user_id = payload.get("user_id")
-        
-        sessions = memory.get_user_sessions(user_id)
-        return {"sessions": sessions}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "agent": "active" if agent_instance else "inactive",
-        "timestamp": datetime.utcnow().isoformat()
-    }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print("🚀 Starting SearchMind API...")
+    uvicorn.run(app, host="0.0.0.0", port=8001)
