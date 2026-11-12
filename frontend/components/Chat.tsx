@@ -14,6 +14,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import AuthModal from "./AuthModal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -31,12 +32,15 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState("default");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    loadHistory();
-  }, [token, sessionId]);
+    if (user && token) {
+      loadHistory();
+    }
+  }, [token, sessionId, user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -73,6 +77,12 @@ export default function Chat() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
+
+    // Check if user is authenticated
+    if (!user || !token) {
+      setShowAuthModal(true);
+      return;
+    }
 
     const userMessage: Message = {
       role: "user",
@@ -121,12 +131,21 @@ export default function Chat() {
   };
 
   const startNewChat = () => {
+    if (!user || !token) {
+      setShowAuthModal(true);
+      return;
+    }
     setMessages([]);
     setSessionId(`chat_${Date.now()}`);
   };
 
   return (
     <div className="flex h-screen bg-white dark:bg-black">
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} />
+      )}
+
       {/* Sidebar */}
       <div
         className={`${
@@ -145,24 +164,36 @@ export default function Chat() {
 
         <div className="flex-1 overflow-y-auto px-2"></div>
 
-        <div className="p-3 border-t border-gray-200 dark:border-zinc-800 space-y-1">
-          <div className="flex items-center gap-3 px-3 py-2 text-sm">
-            <User className="w-4 h-4" />
-            <span className="truncate">{user?.name}</span>
+        {/* User Section */}
+        {user ? (
+          <div className="p-3 border-t border-gray-200 dark:border-zinc-800 space-y-1">
+            <div className="flex items-center gap-3 px-3 py-2 text-sm">
+              <User className="w-4 h-4" />
+              <span className="truncate">{user.name}</span>
+            </div>
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-900 transition-colors text-sm"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log out</span>
+            </button>
           </div>
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-900 transition-colors text-sm"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Log out</span>
-          </button>
-        </div>
+        ) : (
+          <div className="p-3 border-t border-gray-200 dark:border-zinc-800">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="w-full px-3 py-2.5 bg-black dark:bg-white text-white dark:text-black rounded-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors text-sm"
+            >
+              Sign in
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
+        {/* Header with Logo and Theme Toggle */}
         <header className="h-14 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <button
@@ -175,9 +206,16 @@ export default function Chat() {
                 <Menu className="w-5 h-5" />
               )}
             </button>
-            <span className="font-semibold text-lg">SearchMind</span>
+            {/* AI Logo */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-white dark:border-black rounded-full"></div>
+              </div>
+              <span className="font-semibold text-lg">SearchMind</span>
+            </div>
           </div>
 
+          {/* Theme Toggle */}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-900 rounded-lg transition-colors"
@@ -194,8 +232,8 @@ export default function Chat() {
         <div className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center px-4">
-              <div className="w-12 h-12 bg-black dark:bg-white rounded-xl flex items-center justify-center mb-6">
-                <div className="w-6 h-6 border-2 border-white dark:border-black rounded-full"></div>
+              <div className="w-16 h-16 bg-black dark:bg-white rounded-xl flex items-center justify-center mb-6">
+                <div className="w-8 h-8 border-2 border-white dark:border-black rounded-full"></div>
               </div>
               <h2 className="text-2xl font-semibold mb-2">
                 How can I help you today?
@@ -218,7 +256,7 @@ export default function Chat() {
                   )}
                   <div className="flex-1 space-y-2 pt-1">
                     <div className="font-medium text-sm text-gray-900 dark:text-white">
-                      {message.role === "assistant" ? "SearchMind" : user?.name}
+                      {message.role === "assistant" ? "SearchMind" : user?.name || "You"}
                     </div>
                     <p className="text-gray-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed">
                       {message.content}
