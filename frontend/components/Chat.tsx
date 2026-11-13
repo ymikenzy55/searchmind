@@ -33,8 +33,13 @@ export default function Chat() {
   const [sessionId, setSessionId] = useState("default");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (user && token) {
@@ -216,16 +221,18 @@ export default function Chat() {
           </div>
 
           {/* Theme Toggle */}
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-900 rounded-lg transition-colors"
-          >
-            {theme === "dark" ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </button>
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-900 rounded-lg transition-colors"
+            >
+              {theme === "dark" ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </button>
+          )}
         </header>
 
         {/* Messages Area */}
